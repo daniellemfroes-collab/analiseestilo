@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise de estilo — protótipo</title>
+<style>
+  :root{
+    --paper: #EDEAE2;
+    --paper-raised: #F5F3EC;
+    --ink: #262220;
+    --ink-soft: #5B564F;
+    --rule: #D8D3C6;
+    --accent: #5B3A45;
+    --accent-soft: #8A6570;
+
+    --c-passiva: #6B5B95;
+    --c-passiva-bg: #6B5B9526;
+    --c-muleta: #A67527;
+    --c-muleta-bg: #A6752730;
+    --c-adverbio: #2F6E64;
+    --c-adverbio-bg: #2F6E6428;
+    --c-repeticao: #A2454D;
+    --c-repeticao-bg: #A2454D2A;
+
+    --font-serif: 'Iowan Old Style','Palatino Linotype','Book Antiqua', Georgia, serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    padding: 28px 20px 60px;
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  header{ margin-bottom: 22px; }
+  header h1{
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0 0 4px;
+    color: var(--accent);
+  }
+  header p{
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+    max-width: 62ch;
+    line-height: 1.5;
+  }
+
+  .grid{
+    display: grid;
+    grid-template-columns: minmax(0,1.35fr) minmax(0,1fr);
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 900px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+
+  .input-panel{ padding: 16px; }
+  textarea{
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    font-family: var(--font-serif);
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 12px 14px;
+  }
+  textarea:focus{ outline: 2px solid var(--accent-soft); outline-offset: 1px; }
+
+  .toolbar{
+    display:flex; align-items:center; justify-content: space-between;
+    gap: 12px; margin-top: 12px; flex-wrap: wrap;
+  }
+  button.run{
+    background: var(--accent);
+    color: #F5F3EC;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 3px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.run:hover{ background: #472e37; }
+
+  .toggles{
+    display:flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft);
+  }
+  .toggles label{ display:flex; align-items:center; gap: 6px; cursor: pointer; }
+  .swatch{ width:10px; height:10px; border-radius: 2px; display:inline-block; }
+
+  .preview-panel{ padding: 16px; margin-top: 16px; }
+  .preview-panel h2{
+    font-family: var(--font-sans);
+    font-size: 12px; letter-spacing: .03em;
+    color: var(--ink-soft); margin: 0 0 10px;
+    font-weight: 600;
+  }
+  .preview{
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+  }
+  .preview mark{
+    background: transparent;
+    color: inherit;
+    padding: 0 1px;
+    border-radius: 2px;
+  }
+  .hl-passiva{ background: var(--c-passiva-bg); box-shadow: inset 0 -2px 0 var(--c-passiva); }
+  .hl-muleta{ background: var(--c-muleta-bg); box-shadow: inset 0 -2px 0 var(--c-muleta); }
+  .hl-adverbio{ background: var(--c-adverbio-bg); box-shadow: inset 0 -2px 0 var(--c-adverbio); }
+  .hl-repeticao{ background: var(--c-repeticao-bg); box-shadow: inset 0 -2px 0 var(--c-repeticao); }
+
+  .hide-passiva .hl-passiva{ background: transparent; box-shadow: none; }
+  .hide-muleta .hl-muleta{ background: transparent; box-shadow: none; }
+  .hide-adverbio .hl-adverbio{ background: transparent; box-shadow: none; }
+  .hide-repeticao .hl-repeticao{ background: transparent; box-shadow: none; }
+
+  .stats{ display: flex; flex-direction: column; gap: 12px; }
+  .card{ padding: 14px 16px; }
+  .card summary{
+    display:flex; align-items:center; justify-content: space-between;
+    cursor: pointer; list-style: none; font-weight: 600; font-size: 14px;
+  }
+  .card summary::-webkit-details-marker{ display:none; }
+  .card summary .title{ display:flex; align-items:center; gap: 8px; }
+  .badge{
+    font-family: var(--font-sans);
+    font-size: 11px; font-weight: 700;
+    background: var(--rule); color: var(--ink-soft);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .card .note{
+    font-size: 12.5px; color: var(--ink-soft); line-height: 1.5;
+    margin: 8px 0 10px; font-style: italic;
+  }
+  .rowlist{ display:flex; flex-direction:column; gap: 7px; margin-top: 6px; }
+  .row{ display:flex; align-items:center; gap: 10px; font-size: 13.5px; }
+  .row .word{ min-width: 92px; flex-shrink:0; }
+  .row .bar-wrap{ flex:1; height: 6px; background: var(--rule); border-radius: 3px; overflow:hidden; }
+  .row .bar{ height:100%; border-radius: 3px; }
+  .row .count{ font-variant-numeric: tabular-nums; color: var(--ink-soft); width: 44px; text-align:right; flex-shrink:0; }
+
+  .snippet-list{ display:flex; flex-direction:column; gap: 8px; margin-top: 6px; }
+  .snippet{
+    font-family: var(--font-serif); font-size: 13.5px; line-height:1.5;
+    padding: 7px 9px; background: var(--paper); border-radius: 3px;
+    border-left: 3px solid var(--c-passiva);
+  }
+
+  .diversity-big{ display:flex; align-items:baseline; gap: 10px; margin: 6px 0 10px; }
+  .diversity-big .num{ font-family: var(--font-serif); font-size: 34px; color: var(--accent); }
+  .diversity-big .lbl{ font-size: 12.5px; color: var(--ink-soft); }
+  .mini-stats{ display:flex; gap: 18px; font-size: 12.5px; color: var(--ink-soft); }
+  .mini-stats b{ color: var(--ink); }
+
+  .empty{ color: var(--ink-soft); font-size: 13.5px; padding: 4px 0 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Análise de estilo — protótipo</h1>
+    <p>Cole um trecho do manuscrito, clique em Analisar. As marcações no texto e os números abaixo são heurísticas de palavra/expressão — não um parser gramatical completo — então trate como ponto de partida, não veredito. Diga o que estiver errado que eu ajusto as regras.</p>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="panel input-panel">
+        <textarea id="input" placeholder="Cole aqui um trecho do capítulo…"></textarea>
+        <div class="toolbar">
+          <button class="run" id="runBtn">Analisar</button>
+          <div class="toggles" id="toggles">
+            <label><span class="swatch" style="background:var(--c-passiva)"></span>Voz passiva</label>
+            <label><span class="swatch" style="background:var(--c-muleta)"></span>Muletas</label>
+            <label><span class="swatch" style="background:var(--c-adverbio)"></span>Advérbios</label>
+            <label><span class="swatch" style="background:var(--c-repeticao)"></span>Repetições</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel preview-panel">
+        <h2>TEXTO COM MARCAÇÕES</h2>
+        <div class="preview" id="preview">
+          <span class="empty">A prévia aparece aqui depois de analisar.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="panel card">
+        <div class="title" style="font-weight:600; font-size:14px;">Diversidade de vocabulário</div>
+        <div class="diversity-big"><span class="num" id="divPct">—</span><span class="lbl">de palavras únicas sobre o total</span></div>
+        <div class="mini-stats">
+          <div><b id="divTotal">—</b> palavras</div>
+          <div><b id="divUnique">—</b> únicas</div>
+        </div>
+      </div>
+
+      <details class="panel card" open>
+        <summary><span class="title"><span class="swatch" style="background:var(--c-passiva)"></span>Voz passiva (heurística)</span><span class="badge" id="passivaBadge">0</span></summary>
+        <div class="note">Detecta "ser/estar + particípio" (ex.: "foi levada", "estava cansada"). Marca também construções que não são tecnicamente passivas — confira antes de cortar.</div>
+        <div class="snippet-list" id="passivaList"><div class="empty">Nenhuma ocorrência encontrada.</div></div>
+      </details>
+
+      <details class="panel card" open>
+        <summary><span class="title"><span class="swatch" style="background:var(--c-muleta)"></span>Muletas</span><span class="badge" id="muletaBadge">0</span></summary>
+        <div class="note">Intensificadores e enchimento (muito, até, só, talvez, quase...).</div>
+        <div class="rowlist" id="muletaList"><div class="empty">Nenhuma ocorrência encontrada.</div></div>
+      </details>
+
+      <details class="panel card" open>
+        <summary><span class="title"><span class="swatch" style="background:var(--c-adverbio)"></span>Advérbios mais usados</span><span class="badge" id="adverbioBadge">0</span></summary>
+        <div class="note">Terminados em "-mente" + lista de advérbios comuns (já, ainda, sempre, bem...).</div>
+        <div class="rowlist" id="adverbioList"><div class="empty">Nenhuma ocorrência encontrada.</div></div>
+      </details>
+
+      <details class="panel card" open>
+        <summary><span class="title"><span class="swatch" style="background:var(--c-repeticao)"></span>Repetições próximas</span><span class="badge" id="repeticaoBadge">0</span></summary>
+        <div class="note">Palavras que se repetem em uma janela curta — a etiqueta mostra a menor distância encontrada. P. ex: 34× no texto — mín. 3 palavras de distância.</div>
+        <div class="rowlist" id="repeticaoList"><div class="empty">Nenhuma ocorrência encontrada.</div></div>
+      </details>
+
+      <details class="panel card">
+        <summary><span class="title">Palavras mais usadas</span><span class="badge" id="usadasBadge">0</span></summary>
+        <div class="note">Exclui apenas artigos, preposições e conectivos básicos (o, a, de, que, em, para...) — pronomes e verbos comuns ficam.</div>
+        <div class="rowlist" id="usadasList"><div class="empty">Nenhuma ocorrência encontrada.</div></div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+const STOP_HARD = new Set(["a","o","as","os","de","do","da","dos","das","e","é","que","em","um","uma","uns","umas","para","com","não","se","na","no","nas","nos","por","como","ao","à","às","aos","ou","mas"]);
+
+const MULETAS = new Set(["muito","muita","muitos","muitas","até","só","apenas","realmente","tão","talvez","quase","meio","simplesmente","praticamente","certamente","definitivamente","literalmente","basicamente","novamente","mesmo","decerto","obviamente","evidentemente","provavelmente","possivelmente"]);
+const MULETAS_MULTI = ["de repente","um pouco","meio que","cada vez mais"];
+
+const ADVERBIOS_BASE = new Set(["já","ainda","sempre","nunca","jamais","também","bem","mal","aqui","ali","lá","cá","hoje","ontem","amanhã","agora","depois","antes","dentro","fora","longe","perto","devagar","depressa","assim","então","afinal","enfim","outrora","raramente"]);
+
+const PASSIVE_REGEX = /\b(sou|é|somos|são|era|éramos|eram|fui|foi|fomos|foram|serei|será|seremos|serão|seja|sejamos|sejam|fosse|fôssemos|fossem|estou|está|estamos|estão|estava|estávamos|estavam|estive|esteve|estivemos|estiveram|sendo|sido)\b(\s+\S+){0,3}?\s+([a-zà-ÿ]+(?:ado|ada|ados|adas|ido|ida|idos|idas))\b/gi;
+
+const WORD_REGEX = /[A-Za-zÀ-ÖØ-öø-ÿ]+/g;
+const REPEAT_WINDOW = 8; // palavras de distância consideradas "perto"
+
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function analyze(text){
+  const words = [];
+  let m;
+  WORD_REGEX.lastIndex = 0;
+  let wi = 0;
+  while((m = WORD_REGEX.exec(text))){
+    words.push({text: m[0], start: m.index, end: m.index + m[0].length, idx: wi});
+    wi++;
+  }
+
+  // Diversidade
+  const lowerWords = words.map(w=>w.text.toLowerCase());
+  const uniqueSet = new Set(lowerWords);
+  const diversity = words.length ? (uniqueSet.size / words.length * 100) : 0;
+
+  // Muletas (single word)
+  const muletaSpans = [];
+  const muletaCounts = new Map();
+  words.forEach(w=>{
+    const lw = w.text.toLowerCase();
+    if(MULETAS.has(lw)){
+      muletaSpans.push({start:w.start,end:w.end,type:'muleta'});
+      muletaCounts.set(lw,(muletaCounts.get(lw)||0)+1);
+    }
+  });
+  // Muletas (multi word) - conta mas não destaca
+  MULETAS_MULTI.forEach(phrase=>{
+    const re = new RegExp("\\b"+phrase.replace(" ","\\s+")+"\\b","gi");
+    const matches = text.match(re);
+    if(matches) muletaCounts.set(phrase,(muletaCounts.get(phrase)||0)+matches.length);
+  });
+
+  // Advérbios
+  const adverbioSpans = [];
+  const adverbioCounts = new Map();
+  words.forEach(w=>{
+    const lw = w.text.toLowerCase();
+    if(MULETAS.has(lw)) return; // já é muleta, não duplica destaque
+    const isMente = /mente$/i.test(lw) && lw.length > 6;
+    if(ADVERBIOS_BASE.has(lw) || isMente){
+      adverbioSpans.push({start:w.start,end:w.end,type:'adverbio'});
+      adverbioCounts.set(lw,(adverbioCounts.get(lw)||0)+1);
+    }
+  });
+
+  // Repetições próximas
+  const positionsByWord = new Map();
+  words.forEach(w=>{
+    const lw = w.text.toLowerCase();
+    if(lw.length < 3 || STOP_HARD.has(lw)) return;
+    if(!positionsByWord.has(lw)) positionsByWord.set(lw, []);
+    positionsByWord.get(lw).push(w);
+  });
+  const repeticaoSpans = [];
+  const repeticaoStats = [];
+  positionsByWord.forEach((occs, lw)=>{
+    if(occs.length < 2) return;
+    let minGap = Infinity;
+    for(let i=1;i<occs.length;i++){
+      const gap = occs[i].idx - occs[i-1].idx;
+      if(gap < minGap) minGap = gap;
+    }
+    if(minGap <= REPEAT_WINDOW){
+      repeticaoStats.push({word: lw, count: occs.length, minGap});
+      occs.forEach(o=> repeticaoSpans.push({start:o.start,end:o.end,type:'repeticao'}));
+    }
+  });
+
+  // Voz passiva
+  const passivaSpans = [];
+  const passivaSnippets = [];
+  PASSIVE_REGEX.lastIndex = 0;
+  let pm;
+  while((pm = PASSIVE_REGEX.exec(text))){
+    passivaSpans.push({start: pm.index, end: pm.index + pm[0].length, type:'passiva'});
+    passivaSnippets.push(pm[0]);
+  }
+
+  // Palavras mais usadas
+  const usoCounts = new Map();
+  words.forEach(w=>{
+    const lw = w.text.toLowerCase();
+    if(STOP_HARD.has(lw) || lw.length < 2) return;
+    usoCounts.set(lw,(usoCounts.get(lw)||0)+1);
+  });
+
+  // Merge spans by priority: passiva > muleta > adverbio > repeticao
+  const accepted = [];
+  function overlaps(a,b){ return a.start < b.end && b.start < a.end; }
+  function tryAdd(span){
+    for(const acc of accepted){ if(overlaps(acc, span)) return; }
+    accepted.push(span);
+  }
+  passivaSpans.forEach(tryAdd);
+  muletaSpans.forEach(tryAdd);
+  adverbioSpans.forEach(tryAdd);
+  repeticaoSpans.forEach(tryAdd);
+  accepted.sort((a,b)=>a.start-b.start);
+
+  // Render preview HTML
+  let html = "";
+  let cursor = 0;
+  accepted.forEach(span=>{
+    html += escapeHtml(text.slice(cursor, span.start));
+    html += `<mark class="hl-${span.type}">${escapeHtml(text.slice(span.start, span.end))}</mark>`;
+    cursor = span.end;
+  });
+  html += escapeHtml(text.slice(cursor));
+
+  return {
+    totalWords: words.length,
+    uniqueWords: uniqueSet.size,
+    diversity,
+    muletaCounts,
+    adverbioCounts,
+    repeticaoStats,
+    passivaSnippets,
+    usoCounts,
+    previewHtml: html || '<span class="empty">Nada para mostrar.</span>'
+  };
+}
+
+function renderBarList(containerId, entries, colorVar, maxItems){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  if(!entries.length){
+    el.innerHTML = '<div class="empty">Nenhuma ocorrência encontrada.</div>';
+    return;
+  }
+  const top = entries.slice(0, maxItems || 15);
+  const max = top[0][1];
+  top.forEach(([word,count])=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <span class="word">${escapeHtml(word)}</span>
+      <span class="bar-wrap"><span class="bar" style="width:${(count/max*100).toFixed(0)}%; background:${colorVar}"></span></span>
+      <span class="count">${count}×</span>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function run(){
+  const text = document.getElementById("input").value.trim();
+  const preview = document.getElementById("preview");
+  if(!text){
+    preview.innerHTML = '<span class="empty">Cole um trecho e clique em Analisar.</span>';
+    return;
+  }
+  const r = analyze(text);
+
+  preview.innerHTML = r.previewHtml;
+
+  document.getElementById("divPct").textContent = r.diversity.toFixed(1) + "%";
+  document.getElementById("divTotal").textContent = r.totalWords;
+  document.getElementById("divUnique").textContent = r.uniqueWords;
+
+  const muletaEntries = [...r.muletaCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  document.getElementById("muletaBadge").textContent = muletaEntries.reduce((s,e)=>s+e[1],0);
+  renderBarList("muletaList", muletaEntries, "var(--c-muleta)");
+
+  const adverbioEntries = [...r.adverbioCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  document.getElementById("adverbioBadge").textContent = adverbioEntries.reduce((s,e)=>s+e[1],0);
+  renderBarList("adverbioList", adverbioEntries, "var(--c-adverbio)");
+
+  const repList = r.repeticaoStats.sort((a,b)=>b.count-a.count);
+  document.getElementById("repeticaoBadge").textContent = repList.reduce((s,e)=>s+e.count,0);
+  const repEl = document.getElementById("repeticaoList");
+  repEl.innerHTML = "";
+  if(!repList.length){
+    repEl.innerHTML = '<div class="empty">Nenhuma ocorrência encontrada.</div>';
+  } else {
+    repList.forEach(item=>{
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `
+        <span class="word">${escapeHtml(item.word)}</span>
+        <span class="bar-wrap"><span class="bar" style="width:${Math.min(100, item.count*100/Math.max(1,repList[0].count)).toFixed(0)}%; background:var(--c-repeticao)"></span></span>
+        <span class="count">${item.count}× · ${item.minGap}p</span>
+      `;
+      repEl.appendChild(row);
+    });
+  }
+
+  document.getElementById("passivaBadge").textContent = r.passivaSnippets.length;
+  const passivaEl = document.getElementById("passivaList");
+  passivaEl.innerHTML = "";
+  if(!r.passivaSnippets.length){
+    passivaEl.innerHTML = '<div class="empty">Nenhuma ocorrência encontrada.</div>';
+  } else {
+    r.passivaSnippets.slice(0,12).forEach(s=>{
+      const div = document.createElement("div");
+      div.className = "snippet";
+      div.textContent = "…" + s + "…";
+      passivaEl.appendChild(div);
+    });
+  }
+
+  const usoEntries = [...r.usoCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,30);
+  document.getElementById("usadasBadge").textContent = usoEntries.length;
+  renderBarList("usadasList", usoEntries, "var(--accent-soft)", 15);
+}
+
+document.getElementById("runBtn").addEventListener("click", run);
+
+document.querySelectorAll("#toggles input").forEach(()=>{}); // placeholder
+
+const toggleMap = [
+  {label:"Voz passiva", cls:"hide-passiva"},
+  {label:"Muletas", cls:"hide-muleta"},
+  {label:"Advérbios", cls:"hide-adverbio"},
+  {label:"Repetições", cls:"hide-repeticao"}
+];
+document.querySelectorAll("#toggles label").forEach((lbl, i)=>{
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.checked = true;
+  lbl.prepend(cb);
+  cb.addEventListener("change", ()=>{
+    document.getElementById("preview").classList.toggle(toggleMap[i].cls, !cb.checked);
+  });
+});
+</script>
+</body>
+</html>
