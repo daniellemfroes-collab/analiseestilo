@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise de Estilo</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  :root{
+    --paper: #EDEAE2;
+    --paper-raised: #F5F3EC;
+    --ink: #262220;
+    --ink-soft: #5B564F;
+    --rule: #D8D3C6;
+    --accent: #5B3A45;
+    --accent-soft: #8A6570;
+
+    --c-passiva: #6B5B95;
+    --c-muleta: #A67527;
+    --c-adverbio: #2F6E64;
+    --c-repeticao: #A2454D;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    padding: 16px;
+    font-size: 13.5px;
+  }
+  h1{
+    font-size: 15px; margin: 0 0 4px; color: var(--accent);
+  }
+  .subtitle{ color: var(--ink-soft); font-size: 12px; line-height: 1.5; margin: 0 0 14px; }
+
+  .actions{ display:flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  button{
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+  }
+  button.primary{ background: var(--accent); color: #F5F3EC; }
+  button.primary:hover{ background: #472e37; }
+  button.secondary{ background: var(--paper-raised); color: var(--ink); border: 1px solid var(--rule); }
+  button.secondary:hover{ background: #e7e3d8; }
+  button:disabled{ opacity: .5; cursor: default; }
+
+  .toggles{ display:flex; flex-direction:column; gap: 6px; margin: 4px 0 14px; font-size: 12.5px; }
+  .toggles label{ display:flex; align-items:center; gap: 7px; }
+  .swatch{ width:10px; height:10px; border-radius: 2px; display:inline-block; }
+
+  .status{ font-size: 12px; color: var(--ink-soft); min-height: 16px; margin-bottom: 10px; }
+  .status.error{ color: var(--c-repeticao); }
+
+  .stats{ display: flex; flex-direction: column; gap: 10px; }
+  .card{ background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px; }
+  .card summary{
+    display:flex; align-items:center; justify-content: space-between;
+    cursor: pointer; list-style: none; font-weight: 600; font-size: 13px;
+  }
+  .card summary::-webkit-details-marker{ display:none; }
+  .card summary .title{ display:flex; align-items:center; gap: 7px; }
+  .badge{
+    font-size: 11px; font-weight: 700;
+    background: var(--rule); color: var(--ink-soft);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .note{ font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; margin: 7px 0 8px; font-style: italic; }
+  .row{ display:flex; align-items:center; gap: 8px; font-size: 12.5px; padding: 3px 0; }
+  .row .word{ min-width: 78px; flex-shrink:0; }
+  .row .bar-wrap{ flex:1; height: 5px; background: var(--rule); border-radius: 3px; overflow:hidden; }
+  .row .bar{ height:100%; border-radius: 3px; }
+  .row .count{ font-variant-numeric: tabular-nums; color: var(--ink-soft); width: 44px; text-align:right; flex-shrink:0; }
+  .snippet{ font-size: 12px; line-height:1.5; padding: 6px 8px; background: var(--paper); border-radius: 3px; border-left: 3px solid var(--c-passiva); margin-bottom:6px; }
+  .diversity-big{ display:flex; align-items:baseline; gap: 8px; margin: 4px 0 8px; }
+  .diversity-big .num{ font-size: 26px; color: var(--accent); }
+  .mini-stats{ display:flex; gap: 14px; font-size: 11.5px; color: var(--ink-soft); }
+  .mini-stats b{ color: var(--ink); }
+  .empty{ color: var(--ink-soft); font-size: 12.5px; }
+</style>
+</head>
+<body>
+  <h1>Análise de Estilo</h1>
+  <p class="subtitle">Heurísticas de palavra/expressão em português — não é um parser gramatical completo. Trate como ponto de partida, não veredito.</p>
+
+  <div class="actions">
+    <button class="primary" id="analyzeBtn" disabled>Analisar documento</button>
+    <button class="secondary" id="applyBtn" disabled>Marcar no documento</button>
+    <button class="secondary" id="clearBtn" disabled>Limpar marcações</button>
+  </div>
+
+  <div class="toggles" id="toggles">
+    <label><input type="checkbox" data-cat="passiva" checked><span class="swatch" style="background:var(--c-passiva)"></span>Voz passiva</label>
+    <label><input type="checkbox" data-cat="muleta" checked><span class="swatch" style="background:var(--c-muleta)"></span>Muletas</label>
+    <label><input type="checkbox" data-cat="adverbio" checked><span class="swatch" style="background:var(--c-adverbio)"></span>Advérbios</label>
+    <label><input type="checkbox" data-cat="repeticao" checked><span class="swatch" style="background:var(--c-repeticao)"></span>Repetições</label>
+  </div>
+
+  <div class="status" id="status">Carregando o Word…</div>
+
+  <div class="stats" id="stats" style="display:none;">
+    <div class="card">
+      <div class="title" style="font-weight:600;">Diversidade de vocabulário</div>
+      <div class="diversity-big"><span class="num" id="divPct">—</span><span style="font-size:11.5px;color:var(--ink-soft);">de palavras únicas sobre o total</span></div>
+      <div class="mini-stats"><div><b id="divTotal">—</b> palavras</div><div><b id="divUnique">—</b> únicas</div></div>
+    </div>
+
+    <details class="card" open>
+      <summary><span class="title"><span class="swatch" style="background:var(--c-passiva)"></span>Voz passiva</span><span class="badge" id="passivaBadge">0</span></summary>
+      <div class="note">Detecta "ser/estar + particípio". Marca também construções que não são tecnicamente passivas — confira antes de cortar.</div>
+      <div id="passivaList"><div class="empty">Nenhuma ocorrência.</div></div>
+    </details>
+
+    <details class="card" open>
+      <summary><span class="title"><span class="swatch" style="background:var(--c-muleta)"></span>Muletas</span><span class="badge" id="muletaBadge">0</span></summary>
+      <div class="note">Intensificadores e enchimento (muito, até, só, talvez, quase...).</div>
+      <div id="muletaList"><div class="empty">Nenhuma ocorrência.</div></div>
+    </details>
+
+    <details class="card" open>
+      <summary><span class="title"><span class="swatch" style="background:var(--c-adverbio)"></span>Advérbios</span><span class="badge" id="adverbioBadge">0</span></summary>
+      <div class="note">Terminados em "-mente" + lista de advérbios comuns.</div>
+      <div id="adverbioList"><div class="empty">Nenhuma ocorrência.</div></div>
+    </details>
+
+    <details class="card" open>
+      <summary><span class="title"><span class="swatch" style="background:var(--c-repeticao)"></span>Repetições</span><span class="badge" id="repeticaoBadge">0</span></summary>
+      <div class="note">P. ex: 34× no texto — mín. 3 palavras de distância.</div>
+      <div id="repeticaoList"><div class="empty">Nenhuma ocorrência.</div></div>
+    </details>
+
+    <details class="card">
+      <summary><span class="title">Palavras mais usadas</span><span class="badge" id="usadasBadge">0</span></summary>
+      <div class="note">Exclui apenas artigos, preposições e conectivos básicos.</div>
+      <div id="usadasList"><div class="empty">Nenhuma ocorrência.</div></div>
+    </details>
+  </div>
+
+<script>
+// ---------- Motor de análise (mesmo do protótipo já validado) ----------
+const STOP_HARD = new Set(["a","o","as","os","de","do","da","dos","das","e","é","que","em","um","uma","uns","umas","para","com","não","se","na","no","nas","nos","por","como","ao","à","às","aos","ou","mas"]);
+const MULETAS = new Set(["muito","muita","muitos","muitas","até","só","apenas","realmente","tão","talvez","quase","meio","simplesmente","praticamente","certamente","definitivamente","literalmente","basicamente","novamente","mesmo","decerto","obviamente","evidentemente","provavelmente","possivelmente"]);
+const MULETAS_MULTI = ["de repente","um pouco","meio que","cada vez mais"];
+const ADVERBIOS_BASE = new Set(["já","ainda","sempre","nunca","jamais","também","bem","mal","aqui","ali","lá","cá","hoje","ontem","amanhã","agora","depois","antes","dentro","fora","longe","perto","devagar","depressa","assim","então","afinal","enfim","outrora","raramente"]);
+const PASSIVE_REGEX = /\b(sou|é|somos|são|era|éramos|eram|fui|foi|fomos|foram|serei|será|seremos|serão|seja|sejamos|sejam|fosse|fôssemos|fossem|estou|está|estamos|estão|estava|estávamos|estavam|estive|esteve|estivemos|estiveram|sendo|sido)\b(\s+\S+){0,3}?\s+([a-zà-ÿ]+(?:ado|ada|ados|adas|ido|ida|idos|idas))\b/gi;
+const WORD_REGEX = /[A-Za-zÀ-ÖØ-öø-ÿ]+/g;
+const REPEAT_WINDOW = 8;
+
+function analyze(text){
+  const words = [];
+  let m; WORD_REGEX.lastIndex = 0; let wi = 0;
+  while((m = WORD_REGEX.exec(text))){ words.push({text:m[0], start:m.index, end:m.index+m[0].length, idx:wi}); wi++; }
+  const lowerWords = words.map(w=>w.text.toLowerCase());
+  const uniqueSet = new Set(lowerWords);
+  const diversity = words.length ? (uniqueSet.size/words.length*100) : 0;
+
+  const muletaCounts = new Map();
+  words.forEach(w=>{ const lw=w.text.toLowerCase(); if(MULETAS.has(lw)) muletaCounts.set(lw,(muletaCounts.get(lw)||0)+1); });
+  MULETAS_MULTI.forEach(phrase=>{ const re=new RegExp("\\b"+phrase.replace(" ","\\s+")+"\\b","gi"); const matches=text.match(re); if(matches) muletaCounts.set(phrase,(muletaCounts.get(phrase)||0)+matches.length); });
+
+  const adverbioCounts = new Map();
+  words.forEach(w=>{ const lw=w.text.toLowerCase(); if(MULETAS.has(lw)) return; const isMente=/mente$/i.test(lw)&&lw.length>6; if(ADVERBIOS_BASE.has(lw)||isMente) adverbioCounts.set(lw,(adverbioCounts.get(lw)||0)+1); });
+
+  const positionsByWord = new Map();
+  words.forEach(w=>{ const lw=w.text.toLowerCase(); if(lw.length<3||STOP_HARD.has(lw)) return; if(!positionsByWord.has(lw)) positionsByWord.set(lw,[]); positionsByWord.get(lw).push(w); });
+  const repeticaoStats = [];
+  positionsByWord.forEach((occs,lw)=>{ if(occs.length<2) return; let minGap=Infinity; for(let i=1;i<occs.length;i++){ const gap=occs[i].idx-occs[i-1].idx; if(gap<minGap) minGap=gap; } if(minGap<=REPEAT_WINDOW) repeticaoStats.push({word:lw,count:occs.length,minGap}); });
+
+  const passivaSnippets = [];
+  PASSIVE_REGEX.lastIndex = 0; let pm;
+  while((pm = PASSIVE_REGEX.exec(text))){ passivaSnippets.push(pm[0]); }
+
+  const usoCounts = new Map();
+  words.forEach(w=>{ const lw=w.text.toLowerCase(); if(STOP_HARD.has(lw)||lw.length<2) return; usoCounts.set(lw,(usoCounts.get(lw)||0)+1); });
+
+  return { totalWords: words.length, uniqueWords: uniqueSet.size, diversity, muletaCounts, adverbioCounts, repeticaoStats, passivaSnippets, usoCounts };
+}
+
+function escapeHtml(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function renderBarList(containerId, entries, colorVar, maxItems){
+  const el = document.getElementById(containerId);
+  el.innerHTML = "";
+  if(!entries.length){ el.innerHTML = '<div class="empty">Nenhuma ocorrência.</div>'; return; }
+  const top = entries.slice(0, maxItems || 12);
+  const max = top[0][1];
+  top.forEach(([word,count])=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span class="word">${escapeHtml(word)}</span><span class="bar-wrap"><span class="bar" style="width:${(count/max*100).toFixed(0)}%; background:${colorVar}"></span></span><span class="count">${count}×</span>`;
+    el.appendChild(row);
+  });
+}
+
+let lastResult = null;
+
+function setStatus(msg, isError){
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = "status" + (isError ? " error" : "");
+}
+
+async function analyzeDocument(){
+  setStatus("Lendo o documento…");
+  try{
+    await Word.run(async (context)=>{
+      const body = context.document.body;
+      body.load("text");
+      await context.sync();
+      const r = analyze(body.text);
+      lastResult = r;
+
+      document.getElementById("stats").style.display = "flex";
+      document.getElementById("divPct").textContent = r.diversity.toFixed(1) + "%";
+      document.getElementById("divTotal").textContent = r.totalWords;
+      document.getElementById("divUnique").textContent = r.uniqueWords;
+
+      const muletaEntries = [...r.muletaCounts.entries()].sort((a,b)=>b[1]-a[1]);
+      document.getElementById("muletaBadge").textContent = muletaEntries.reduce((s,e)=>s+e[1],0);
+      renderBarList("muletaList", muletaEntries, "var(--c-muleta)");
+
+      const adverbioEntries = [...r.adverbioCounts.entries()].sort((a,b)=>b[1]-a[1]);
+      document.getElementById("adverbioBadge").textContent = adverbioEntries.reduce((s,e)=>s+e[1],0);
+      renderBarList("adverbioList", adverbioEntries, "var(--c-adverbio)");
+
+      const repList = r.repeticaoStats.sort((a,b)=>b.count-a.count);
+      document.getElementById("repeticaoBadge").textContent = repList.reduce((s,e)=>s+e.count,0);
+      const repEl = document.getElementById("repeticaoList");
+      repEl.innerHTML = "";
+      if(!repList.length){ repEl.innerHTML = '<div class="empty">Nenhuma ocorrência.</div>'; }
+      else{
+        repList.forEach(item=>{
+          const row = document.createElement("div");
+          row.className = "row";
+          row.innerHTML = `<span class="word">${escapeHtml(item.word)}</span><span class="bar-wrap"><span class="bar" style="width:${Math.min(100,item.count*100/Math.max(1,repList[0].count)).toFixed(0)}%; background:var(--c-repeticao)"></span></span><span class="count">${item.count}× · ${item.minGap}p</span>`;
+          repEl.appendChild(row);
+        });
+      }
+
+      document.getElementById("passivaBadge").textContent = r.passivaSnippets.length;
+      const passivaEl = document.getElementById("passivaList");
+      passivaEl.innerHTML = "";
+      if(!r.passivaSnippets.length){ passivaEl.innerHTML = '<div class="empty">Nenhuma ocorrência.</div>'; }
+      else{ r.passivaSnippets.slice(0,10).forEach(s=>{ const div=document.createElement("div"); div.className="snippet"; div.textContent="…"+s+"…"; passivaEl.appendChild(div); }); }
+
+      const usoEntries = [...r.usoCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,30);
+      document.getElementById("usadasBadge").textContent = usoEntries.length;
+      renderBarList("usadasList", usoEntries, "var(--accent-soft)", 12);
+
+      document.getElementById("applyBtn").disabled = false;
+      document.getElementById("clearBtn").disabled = false;
+      setStatus("Análise concluída em " + r.totalWords + " palavras.");
+    });
+  }catch(err){
+    setStatus("Erro ao ler o documento: " + (err && err.message ? err.message : err), true);
+    console.error(err);
+  }
+}
+
+function activeCategories(){
+  const active = {};
+  document.querySelectorAll("#toggles input").forEach(cb=>{ active[cb.dataset.cat] = cb.checked; });
+  return active;
+}
+
+async function applyHighlights(){
+  if(!lastResult){ setStatus("Analise o documento primeiro.", true); return; }
+  const active = activeCategories();
+  setStatus("Marcando no documento…");
+  try{
+    await Word.run(async (context)=>{
+      const jobs = [];
+      if(active.passiva){
+        lastResult.passivaSnippets.forEach(snippet=>{
+          jobs.push({term: snippet, color: "Violet", wholeWord: false});
+        });
+      }
+      if(active.muleta){
+        [...lastResult.muletaCounts.keys()].forEach(term=>{
+          jobs.push({term, color: "Yellow", wholeWord: term.indexOf(" ") === -1});
+        });
+      }
+      if(active.adverbio){
+        [...lastResult.adverbioCounts.keys()].forEach(term=>{
+          jobs.push({term, color: "Turquoise", wholeWord: true});
+        });
+      }
+      if(active.repeticao){
+        lastResult.repeticaoStats.forEach(item=>{
+          jobs.push({term: item.word, color: "Pink", wholeWord: true});
+        });
+      }
+
+      for(const job of jobs){
+        const results = context.document.body.search(job.term, { matchCase: false, matchWholeWord: job.wholeWord });
+        results.load("font");
+        await context.sync();
+        results.items.forEach(range => { range.font.highlightColor = job.color; });
+      }
+      await context.sync();
+      setStatus("Marcações aplicadas (" + jobs.length + " termos).");
+    });
+  }catch(err){
+    setStatus("Erro ao marcar: " + (err && err.message ? err.message : err), true);
+    console.error(err);
+  }
+}
+
+async function clearHighlights(){
+  setStatus("Limpando marcações…");
+  try{
+    await Word.run(async (context)=>{
+      context.document.body.font.highlightColor = "NoHighlight";
+      await context.sync();
+      setStatus("Marcações removidas (isso limpa qualquer marca-texto do documento, não só as nossas).");
+    });
+  }catch(err){
+    setStatus("Erro ao limpar: " + (err && err.message ? err.message : err), true);
+    console.error(err);
+  }
+}
+
+Office.onReady((info)=>{
+  if(info.host === Office.HostType.Word){
+    setStatus("Pronto. Clique em Analisar documento.");
+    document.getElementById("analyzeBtn").disabled = false;
+    document.getElementById("analyzeBtn").addEventListener("click", analyzeDocument);
+    document.getElementById("applyBtn").addEventListener("click", applyHighlights);
+    document.getElementById("clearBtn").addEventListener("click", clearHighlights);
+  } else {
+    setStatus("Este painel foi feito para o Word.", true);
+  }
+});
+</script>
+</body>
+</html>
